@@ -14,7 +14,7 @@ wss.on('connection', (ws) => {
     const username = generateUniqueUsername(); // assign a unique name for the new client
     //
     // Store the WebSocket client in the Map    
-    ws.send(JSON.stringify({ uniqueName : username }));
+    ws.send(JSON.stringify({msgType : "initialize", uniqueName : username }));
     ws.on('message', (message) => {
         console.log(`Received: ${message}`);
         //ws.send(`Server received: ${message}`);
@@ -23,15 +23,18 @@ wss.on('connection', (ws) => {
             req = JSON.parse(message);
             if (req.msgType === 'move')
                 requestHandler(req.name, req.row, req.col, req.roomId);
-            else if (req.msgType == 'room') {
+            else if (req.msgType === 'room') {
                 console.log("Record uId:" + req.name + " in userMap");
                 clientMap.set(username, ws); 
                 joinRoom(req.name, req.roomId);
             } else
                 throw new Error("Invalid MSG type!");
         } catch (error) {
-            console.error('Error parsing JSON:', error);
+            console.error('Error parsing JSON:', error.message);
             //send a denial msg
+            ws.send(JSON.stringify(
+                {msgType: "error", valid : false, msg : error.message}
+            ));
         }
         
     });
@@ -68,35 +71,25 @@ function joinRoom(uId, roomId) {
 }
 
 function requestHandler(uId, i, j, roomId) {
-    try {
         console.log("Get uId:" + uId + " from clientMap");
         let ws = clientMap.get(uId);
         //for current implementation
         let {winning, isU1, lastMove} = putStone(uId, roomId, i, j);
         //send feedback to the user
         ws.send(JSON.stringify(
-            {uId : uId, success : winning, lastMove : lastMove, valid : true, isU1 : isU1}
+            {msgType : "update", uId : uId, success : winning, lastMove : lastMove, valid : true, isU1 : isU1}
         ));
         //send update to the other user
         let room = chessRoomMap.get(roomId);
         let u2Id = room.u1Id == uId ? room.u2Id : room.u1Id;
         console.log("Get uId:" + u2Id + " from clientMap");
         clientMap.get(u2Id).send(JSON.stringify(
-            {uId : uId, success : winning, lastMove : lastMove, valid : true, isU1 : isU1}
+            {msgType : "update", uId : uId, success : winning, lastMove : lastMove, valid : true, isU1 : isU1}
         ));
 
         //If there's a winner, the game is over. Delete the chessRoom
         if (winning)  chessRoomMap.delete(roomId);
         //console.log(board); // This line won't be executed
-    } catch (error) {
-        console.error(`An error occurred: ${error.message}`);
-        //user invalid operation
-        console.log("Get uId:" + u2Id + " from clientMap");
-        console.log("Block request from user:" + uId);
-        clientMap.get(uId).send(JSON.stringify(
-            {uId : uId, success : false, lastMove : null, valid : false, isU1 : false}
-        ));
-    }
 }
 
 
@@ -153,7 +146,6 @@ function putStone(uId, roomId, i, j) {
     if (room == null || room.u2Id == null)
         throw new Error("Cannot begin with one player:" + uId);
     if (room.u1Id != uId && room.u2Id != uId) {
-        console.log("Print room:" + room);
         throw new Error("user:" + uId + " cannot play in the room:" + roomId);
     }
     //check whether it's current user's turn to play
