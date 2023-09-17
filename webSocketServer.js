@@ -3,7 +3,7 @@ const {checkToken} = require('./webToken.js')
 const {joinRoom, requestHandler} = require('./chessBoard.js');
 const {setClientMap} = require('./dataStorage.js')
 
-const WebSocket = require('wss');
+const WebSocket = require('ws');
 const wss = new WebSocket.Server({ server });
 
 wss.on('connection', (ws) => {
