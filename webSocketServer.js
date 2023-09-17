@@ -6,8 +6,6 @@ const {setClientMap} = require('./dataStorage.js')
 const WebSocket = require('ws');
 const wss = new WebSocket.Server({ server });
 
-
-
 wss.on('connection', (ws) => {
     console.log('Client connected');
     //const username = generateUniqueUsername(); // assign a unique name for the new client
@@ -43,6 +41,8 @@ wss.on('connection', (ws) => {
                 requestHandler(uId, req.row, req.col, req.roomId);
             } else if (req.msgType === 'room') {
                 joinRoom(uId, req.roomId);
+            } else if (req.msgType == 'ping') {
+                //do nothing
             } else
                 throw new Error("Invalid MSG type!");
         } catch (error) {
@@ -61,6 +61,7 @@ wss.on('connection', (ws) => {
 
     });
 });
+
 
 console.log('WebSocket server started');
 

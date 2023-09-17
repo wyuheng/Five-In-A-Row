@@ -1,3 +1,5 @@
+const {checkUser} = require('./dataStorage.js');
+
 const jwt = require('jsonwebtoken');
 
 const jwtSecretKey = "This is a random jwt secret token!";
@@ -12,7 +14,7 @@ function assignToken(userId) {
 function checkToken(token) {
     try {
         const decoded = jwt.verify(token, jwtSecretKey);
-        return {valid : true, uId : decoded.userId};
+        return {valid : checkUser(decoded.userId), uId : decoded.userId};
     } catch (error) {
         console.log(error);
         return {valid : false};

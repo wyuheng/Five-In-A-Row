@@ -19,8 +19,10 @@ function joinRoom(uId, roomId) {
         return;
     } 
     room = chessRoomMap.get(roomId);
-    if (room.u1Id == uId || room.u2Id == uId)
+    if (room.u1Id == uId || room.u2Id == uId) {
+        console.log("user:" + uId + " is already in the room:" + uId);
         return;
+    }
     else if (room.u2Id == null) {
         room.u2Id = uId;
         setUserRoom(uId, roomId);
@@ -32,6 +34,8 @@ function joinRoom(uId, roomId) {
 function requestHandler(uId, i, j, roomId) {
         console.log("Get uId:" + uId + " from clientMap");
         let ws = getClientMap(uId);
+        if (ws === undefined)
+            throw new Error("Cannot find the ws of uId:" + uId);
         //for current implementation
         let {winning, isU1, lastMove} = putStone(uId, roomId, i, j);
         //send feedback to the user
@@ -48,7 +52,10 @@ function requestHandler(uId, i, j, roomId) {
             deleteUserRoom(uId, roomId);
             deleteUserRoom(u2Id, roomId);
         }
-        getClientMap(u2Id).send(JSON.stringify(
+        const ws2 = getClientMap(u2Id);
+        if (ws2 === undefined)
+            throw new Error("Cannot find the ws of uId:" + uId);
+        ws2.send(JSON.stringify(
             {msgType : "update", uId : uId, success : winning, lastMove : lastMove, valid : true, isU1 : isU1}
         ));
 }

@@ -20,6 +20,10 @@ function getClientMap(uId) {
     return clientMap.get(uId);
 }
 
+function checkUser(uId) {
+    return userPasswordMap.has(uId);
+}
+
 function setUpNewUser(username, password) {
     if (userPasswordMap.has(username))
         return false;
@@ -54,5 +58,5 @@ function getChessRoomRecord(roomId) {
 }
 
 
-module.exports = {chessRoomMap, setClientMap, getClientMap, setUpNewUser, checkPassword, 
+module.exports = {chessRoomMap, checkUser, setClientMap, getClientMap, setUpNewUser, checkPassword, 
                 setUserRoom, deleteUserRoom, getUserRoom, getChessRoomRecord, setUserClient, getUserClient};
