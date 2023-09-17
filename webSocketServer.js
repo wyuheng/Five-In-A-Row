@@ -33,7 +33,8 @@ wss.on('connection', (ws) => {
                 ws.close(1000, 'Invalid token');
                 return;
             }
-            
+            console.log("Update uId:" + uId + " in userMap");
+            setClientMap(uId, ws);
 
              //******msg from client parsed with JSON.parse(event)**********/
             const req = reqMsg.body;
@@ -41,8 +42,6 @@ wss.on('connection', (ws) => {
             if (req.msgType === 'move') {
                 requestHandler(uId, req.row, req.col, req.roomId);
             } else if (req.msgType === 'room') {
-                console.log("Record uId:" + uId + " in userMap");
-                setClientMap(uId, ws); 
                 joinRoom(uId, req.roomId);
             } else
                 throw new Error("Invalid MSG type!");
