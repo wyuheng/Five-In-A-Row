@@ -3,9 +3,10 @@ const {chessRoomMap} = require("./dataStorage.js");
 const AIName = "AIOpponentBot";
 
 const ChessBoardLength = 19;
-//const ChessBoardLength = 4;
 const winCondition = 5;
 const dirs = [[1, 0], [0, 1], [1, 1], [1, -1]];
+
+
 
 function joinRoom(uId, roomId) {
     if(getUserRoom(uId) != undefined)
@@ -163,6 +164,7 @@ function joinAIRoom(uId, roomId) {
 //const {ChessBoardLength, checkSuccess} = require('./chessBoard.js')
 
 const C = 2;
+const C2 = 0.2;
 
 class Node{
     constructor(state, player, endOfGame, parent = null) {
@@ -229,16 +231,6 @@ class MCTSTree{
             val = simulation(currNode);     
        }
        backPropagation(currNode, val);
-       //console.log("\\\\\\\\end of one loop///////// \n");
-    }
-
-    stopMCTS() {
-        this.running = false;
-        console.log("Waiting for the tree to stop");
-        while(this.inProcess) {   
-            //busy waiting
-            //not a good implementation, but the easiest one since JS doesn't have an in-built lock
-        }
     }
 
     updateMCTS(newMove) {
@@ -252,24 +244,70 @@ class MCTSTree{
         this.root = nextRoot;
     }
 
+
+
     getBestMove() {
-        this.runMCTS(5000, 5);
-        let bestMove = [], bestMoveNode = null;
+        this.runMCTS(40000, 12);
+        let bestMove = 0, bestMoveScore = -Infinity;
         for (const [lastMove, nextNode] of this.root.children.entries()) {
-            //console.log("Move:" +  [Math.floor(lastMove / ChessBoardLength), Math.floor(lastMove % ChessBoardLength)] + " score:" + nextNode.getAvg());
+            console.log("Move:" +  [Math.floor(lastMove / ChessBoardLength), Math.floor(lastMove % ChessBoardLength)] + " score:" + nextNode.getAvg());
             //if there's one move to win directly, then just pick this move
             if (nextNode.endOfGame && nextNode.player == 2) {
                 bestMove = lastMove;
                 break;
             }
-
-            if (bestMoveNode === null || nextNode.getAvg() > bestMoveNode.getAvg()) {
+            const i = Math.floor(lastMove / ChessBoardLength), j = lastMove % ChessBoardLength;
+            
+            const nodeMoveScore = moveScore(nextNode, [i, j]);
+            if (nodeMoveScore > bestMoveScore) {
                 bestMove = lastMove;
-                bestMoveNode = nextNode;
+                bestMoveScore = nodeMoveScore;
             }
         }
         return [Math.floor(bestMove / ChessBoardLength), Math.floor(bestMove % ChessBoardLength)];
     }
+}
+
+function maxConsecutiveNonBlocked(board, i, j, d1, d2, val) {
+    let consecutive = 0;
+    i += d1; j += d2;
+    while(i >= 0 && i < ChessBoardLength && j >= 0 && j < ChessBoardLength) {
+        if (board[i][j] != val) 
+            break;
+        ++consecutive;
+        i += d1;
+        j += d2;
+    }
+    //report 4 even if 4 it's blocked
+    if(consecutive >= 4)
+        return 4;
+    return (i >= 0 && i < ChessBoardLength && j >= 0 && j < ChessBoardLength) && board[i][j] == 0 ?
+            consecutive : 0;
+}
+
+function blockPriority(board, i, j, player) {
+    const otherPlayer = player == 1 ? 2 : 1;
+    let cnt = 0;
+    for (const dir of dirs) {
+        let d1 = dir[0], d2 = dir[1];
+        let cnt1 = maxConsecutiveNonBlocked(board, i, j, d1, d2, otherPlayer),
+            cnt2 = maxConsecutiveNonBlocked(board, i, j, -d1, -d2, otherPlayer);
+        let cnt3 = maxConsecutive(board, i + d1, j + d2, otherPlayer),
+            cnt4 = maxConsecutive(board, i - d1, j - d2, otherPlayer);
+        if(cnt1 >= 4 || cnt2 >= 4)
+            return 100;
+        //non-blocked on one side
+        cnt += (cnt1 >= 3 ? 1 : 0) + (cnt2 >= 3 ? 1 : 0);
+        //non-blocked on both sides
+        cnt += cnt1 + cnt2 >= 3 ? 1 : 0;
+        //non-blocked on at lease one side, prevent 5 consecutive
+        cnt += cnt3 + cnt4 >= 4 ? 100 : 0;
+    }
+    return cnt;
+}
+
+function moveScore(node, lastMove) {
+    return node.getAvg() + C2 * blockPriority(node.state, lastMove[0], lastMove[1], node.player);
 }
 
 function backPropagation(node, val) {
@@ -284,7 +322,6 @@ function backPropagation(node, val) {
 
 
 function select (node) {
-    
     if (node.children.length == 0)
         throw new Error("Cannot do selection on a leaf node");
     let candidate = null, bestUCB = -Infinity, moveChosen = null;
