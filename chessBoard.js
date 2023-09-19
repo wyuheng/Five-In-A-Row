@@ -253,7 +253,7 @@ class MCTSTree{
     }
 
     getBestMove() {
-        this.runMCTS(30000, 10);
+        this.runMCTS(5000, 7);
         let bestMove = [], bestMoveNode = null;
         for (const [lastMove, nextNode] of this.root.children.entries()) {
             //console.log("Move:" +  [Math.floor(lastMove / ChessBoardLength), Math.floor(lastMove % ChessBoardLength)] + " score:" + nextNode.getAvg());
