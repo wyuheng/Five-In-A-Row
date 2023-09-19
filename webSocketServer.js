@@ -1,6 +1,6 @@
 const server = require('./APIServer.js')
 const {checkToken} = require('./webToken.js')
-const {joinRoom, requestHandler} = require('./chessBoard.js');
+const {joinRoom, requestHandler, joinAIRoom} = require('./chessBoard.js');
 const {setClientMap} = require('./dataStorage.js')
 
 const WebSocket = require('ws');
@@ -40,7 +40,11 @@ wss.on('connection', (ws) => {
             if (req.msgType === 'move') {
                 requestHandler(uId, req.row, req.col, req.roomId);
             } else if (req.msgType === 'room') {
-                joinRoom(uId, req.roomId);
+                if(req.roomId == "AI")
+                    joinAIRoom(uId, req.roomId);
+                else
+                    joinRoom(uId, req.roomId);
+                
             } else if (req.msgType == 'ping') {
                 //do nothing
             } else
